@@ -235,14 +235,18 @@ if [[ -z $BOARD ]]; then
 	options+=("orangepi800"                 "Rockchip  RK3399 hexa core 4GB RAM GBE eMMC USB3 USB-C WiFi/BT VGA")
 	options+=("orangepi5"                 "Rockchip  RK3588S octa core 4-16GB RAM GBE USB3 USB-C NVMe")
 	options+=("orangepicm5"                 "Rockchip  RK3588S octa core 4-16GB RAM GBE USB3 USB-C")
+	options+=("orangepicm5-tablet"           "Rockchip  RK3588S octa core 4-16GB RAM USB3 USB-C WiFi/BT")
 	options+=("orangepi5b"                 "Rockchip  RK3588S octa core 4-16GB RAM GBE USB3 USB-C WiFi/BT eMMC")
 	#options+=("orangepitab"                 "Rockchip  RK3588S octa core 4-16GB RAM USB-C WiFi/BT NVMe")
 	#options+=("orangepi900"                 "Rockchip  RK3588 octa core 4-16GB RAM 2.5GBE USB3 USB-C WiFi/BT NVMe")
-	#options+=("orangepi5pro"                 "Rockchip  RK3588S octa core 4-32GB RAM GBE USB3 WiFi/BT NVMe eMMC")
+	options+=("orangepi5pro"                 "Rockchip  RK3588S octa core 4-16GB RAM GBE USB3 WiFi/BT NVMe eMMC")
+	options+=("orangepi5max"                 "Rockchip  RK3588 octa core 4-16GB RAM 2.5GBE USB3 WiFi/BT NVMe eMMC")
+	options+=("orangepi5ultra"                "Rockchip  RK3588 octa core 4-16GB RAM 2.5GBE USB3 WiFi/BT NVMe eMMC")
 	options+=("orangepi5plus"                 "Rockchip  RK3588 octa core 4-32GB RAM 2.5GBE USB3 USB-C WiFi/BT NVMe eMMC")
 	options+=("orangepicm4"                 "Rockchip  RK3566 quad core 2-8GB RAM GBE eMMC USB3 NvMe WiFi/BT")
 	options+=("orangepi3b"                  "Rockchip  RK3566 quad core 2-8GB RAM GBE eMMC USB3 NvMe WiFi/BT")
 	#options+=("orangepir1plus"              "Rockchip  RK3328 quad core 1GB RAM 2xGBE USB2 SPI")
+	#options+=("orangepi3plus"              "Amlogic S905D3 quad core 2/4GB RAM SoC eMMC GBE USB3 SPI WiFi/BT")
 
 	menustr="Please choose a Board."
 	BOARD=$(whiptail --title "${titlestr}" --backtitle "${backtitle}" \
@@ -282,21 +286,6 @@ if [[ -z $BRANCH ]]; then
 	[[ -z $BRANCH ]] && exit_with_error "No kernel branch selected"
 	[[ $BRANCH == dev && $SHOW_WARNING == yes ]] && show_developer_warning
 
-fi
-
-if [[ -z ${MEM_TYPE} && ${BOARD} =~ orangepizero3|orangepir1b|orangepizero2w && ${BUILD_OPT} =~ u-boot|image && ${BRANCH} == next ]]; then
-
-	options+=("1500MB"    "1.5 GB Memory")
-	options+=("Others"    "1/2/4 GB Memory")
-
-	menustr="Please choose memory size for ${BOARD}."
-	MEM_TYPE=$(whiptail --title "${titlestr}" --backtitle "${backtitle}" \
-			  --menu "${menustr}" "${TTY_Y}" "${TTY_X}" $((TTY_Y - 8))  \
-			  --cancel-button Exit --ok-button Select "${options[@]}" \
-			  3>&1 1>&2 2>&3)
-
-	unset options
-	[[ -z $MEM_TYPE ]] && exit_with_error "No option selected"
 fi
 
 if [[ $BUILD_OPT =~ rootfs|image && -z $RELEASE ]]; then
@@ -499,6 +488,11 @@ if [[ ${IGNORE_UPDATES} != yes ]]; then
 	*build needed tools for the build, host-side*
 	After sources are fetched, build host-side tools needed for the build.
 	BUILD_HOST_TOOLS
+
+	if [[ ${BOARDFAMILY} == "rockchip-rk3588" ]]; then
+		local rkbin_url="https://github.com/orangepi-xunlong/rk-rootfs-build/raw/rkbin/rk35"
+		wget -nc -P ${EXTER}/cache/sources/rkbin-tools/rk35/ ${rkbin_url}/rk3588_bl31_v1.45_20240422.elf
+	fi
 
 fi
 

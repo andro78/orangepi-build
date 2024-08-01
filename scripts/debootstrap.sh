@@ -328,6 +328,8 @@ create_rootfs_cache()
 			[[ ${PIPESTATUS[0]} -ne 0 ]] && exit_with_error "Installation of Orange Pi desktop packages for ${BRANCH} ${BOARD} ${RELEASE} ${DESKTOP_APPGROUPS_SELECTED} ${DESKTOP_ENVIRONMENT} ${BUILD_MINIMAL} failed"
 		fi
 
+		install_docker
+
 		# Remove packages from packages.uninstall
 
 		display_alert "Uninstall packages" "$PACKAGE_LIST_UNINSTALL" "info"
@@ -800,11 +802,7 @@ create_image()
 		IMAGE_TYPE=desktop
 	fi
 
-	if [[ ${MEM_TYPE} == "1500MB" ]]; then
-		local version="${BOARD^}_${REVISION}_${DISTRIBUTION,}_${RELEASE}_${IMAGE_TYPE}"${DESKTOP_ENVIRONMENT:+_$DESKTOP_ENVIRONMENT}"_linux$(grab_version "$LINUXSOURCEDIR")_1.5gb"
-	else
-		local version="${BOARD^}_${REVISION}_${DISTRIBUTION,}_${RELEASE}_${IMAGE_TYPE}"${DESKTOP_ENVIRONMENT:+_$DESKTOP_ENVIRONMENT}"_linux$(grab_version "$LINUXSOURCEDIR")"
-	fi
+	local version="${BOARD^}_${REVISION}_${DISTRIBUTION,}_${RELEASE}_${IMAGE_TYPE}"${DESKTOP_ENVIRONMENT:+_$DESKTOP_ENVIRONMENT}"_linux$(grab_version "$LINUXSOURCEDIR")"
 
 	if [[ ${RELEASE} == "raspi" ]]; then
 		local version="${BOARD^}_${REVISION}_raspios_bullseye_${IMAGE_TYPE}"${DESKTOP_ENVIRONMENT:+_$DESKTOP_ENVIRONMENT}"_linux$(grab_version "$LINUXSOURCEDIR")"

@@ -97,8 +97,54 @@ prepare_board() {
 		rockpro64|renegade-elite|pinebook-pro|station-p1)
 			BOARDFAMILY=rk3399
 			;;
-		orangepi5|orangepicm5|orangepi5b|orangepi5plus|orangepi5pro|orangepitab|orangepi900)
+		orangepi5|orangepicm5|orangepicm5-tablet|orangepi5b|orangepi5plus|orangepi5pro|orangepi5max|orangepi5ultra|orangepitab|orangepi900)
 			[[ $BOARD =~ orangepi5|orangepi5b ]] && echo host > /sys/kernel/debug/usb/fc000000.usb/mode
+			if [[ $BOARD =~ orangepicm5 ]]; then
+				while true; do
+				        echo "set host!"
+				        echo host > /sys/kernel/debug/usb/fc000000.usb/mode
+				        sleep 0.5
+
+				        count=0
+				        for i in {1..3}; do
+				                sleep 0.5
+				                echo "check"
+				                if [[ "$(cat /sys/kernel/debug/usb/fc000000.usb/mode)" == "host" ]]; then
+				                        ((count++))
+				                else
+				                        break
+				                fi
+				                echo "check host $count"
+				        done
+
+				        [[ $count -eq 3 ]] && break
+				        echo "fail"
+				done
+			fi
+
+
+			if [[ ${BOARD}x == orangepicm5-tabletx ]]; then
+				tinymix -D 2 aw87xxx_profile_switch_0 Music
+				tinymix -D 2 aw87xxx_profile_switch_1 Music
+			fi
+
+			if [[ ${BOARD}x == orangepicm5x ]]; then
+
+				declare -A led_map=(
+					["wan"]="end|eth"
+					["lan1"]="enP4"
+					["lan2"]="enP3"
+				)
+
+				for led in "${!led_map[@]}"; do
+					interface=$(ls /sys/class/net/ | grep -E "${led_map[$led]}" | sed -n 1p)
+					echo netdev > "/sys/class/leds/$led/trigger"
+					echo "$interface" > "/sys/class/leds/$led/device_name"
+					echo 1 > "/sys/class/leds/$led/tx"
+					echo 1 > "/sys/class/leds/$led/rx"
+					echo 1 > "/sys/class/leds/$led/link"
+				done
+			fi
 
 			if [[ $BOARD =~ orangepi900 ]]; then
 				es8388_card=$(aplay -l | grep "es8388" | cut -d ':' -f 1 | cut -d ' ' -f 2)
@@ -111,6 +157,9 @@ prepare_board() {
 					tinymix -D ${es8388_card} 25 0
 					tinymix -D ${es8388_card} 27 0
 				fi
+			elif [[ $BOARD =~ orangepi5plus ]]; then
+				amixer -c ${es8388_card} cset name='PCM Volume' 190 >/dev/null 2>&1
+				amixer -c ${es8388_card} cset name='Right Mixer Right Playback Switch' off >/dev/null 2>&1
 			fi
 
 			if [[ -c /dev/mpp_service ]]; then
@@ -146,7 +195,7 @@ prepare_board() {
 					--baudrate 1500000 --patchram /lib/firmware/ap6275p/BCM4362A2.hcd /dev/ttyS9 &
 			fi
 
-			if [[ $BOARD =~ orangepi5pro ]]; then
+			if [[ $BOARD =~ orangepi5pro|orangepicm5-tablet ]]; then
 
 				es8388_card=$(aplay -l | grep "es8388" | cut -d ':' -f 1 | cut -d ' ' -f 2)
 				tinymix -D ${es8388_card} 37 1
@@ -154,6 +203,12 @@ prepare_board() {
 				rfkill unblock all
 				brcm_patchram_plus --bd_addr_rand --enable_hci --no2bytes --use_baudrate_for_download --tosleep 200000 \
 				        --baudrate 1500000 --patchram /lib/firmware/BCM4345C0.hcd /dev/ttyS9 &
+
+			elif [[ $BOARD =~ orangepi5max|orangepi5ultra ]]; then
+
+				rfkill unblock all
+				brcm_patchram_plus --bd_addr_rand --enable_hci --no2bytes --use_baudrate_for_download --tosleep 200000 \
+				        --baudrate 1500000 --patchram /lib/firmware/SYN43711A0.hcd /dev/ttyS7 &
 			fi
 			;;
 		orangepi3-lts)
@@ -318,14 +373,23 @@ prepare_board() {
 			amixer -c 0 cset name='Playback Path' HP > /dev/null 2>&1
 			amixer -c 0 cset name='Capture MIC Path' 'Main Mic' > /dev/null 2>&1
 
-			if [[ $BOARD == orangepi3b ]]; then
-				rfkill unblock all
-				/usr/bin/hciattach_opi -n -s 1500000 /dev/ttyBT0 sprd &
-			elif [[ $BOARD == orangepicm4 ]]; then
+			bt_status=$(cat /proc/device-tree/wireless-bluetooth/status)
+			wifi_chip=$(cat /proc/device-tree/wireless-wlan/wifi_chip_type)
+
+			if [[ "${wifi_chip}" == "ap6256" && "${bt_status}" == "okay" ]]; then
 				rfkill unblock all
 				brcm_patchram_plus --bd_addr_rand --enable_hci --no2bytes --use_baudrate_for_download --tosleep 200000 \
 				        --baudrate 1500000 --patchram /lib/firmware/BCM4345C0.hcd /dev/ttyS1 &
+			else
+				rfkill unblock all
+				/usr/bin/hciattach_opi -n -s 1500000 /dev/ttyBT0 sprd &
+
 			fi
+			;;
+		orangepi3plus)
+			gpio mode 28 in
+			gpio mode 28 up
+			gpio read 28
 			;;
 
 	esac
@@ -530,7 +594,7 @@ case $1 in
 		prepare_board &
 
 		# add usb quirks
-		add_usb_storage_quirks &
+		# add_usb_storage_quirks &
 
 		# branch naming workaround
 		branch_naming_workaround &
